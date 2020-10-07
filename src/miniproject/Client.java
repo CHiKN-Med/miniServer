@@ -1,3 +1,5 @@
+package miniproject;
+
 import java.io.*;
 import java.net.*;
 import javafx.application.Application;
