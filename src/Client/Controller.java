@@ -16,11 +16,15 @@ public class Controller {
     @FXML
     private TextField userName;
 
+    @FXML
+    private Text userLoggedIn;
+
     public void signInButton(ActionEvent actionEvent) throws IOException {
         GridPane root2 = FXMLLoader.load(getClass().getResource("scene2.fxml"));
         rootPane.getChildren().setAll(root2);
         String UserName = userName.getText();
         System.out.println(UserName);
+        userLoggedIn.setText(UserName);
     }
 
 }
