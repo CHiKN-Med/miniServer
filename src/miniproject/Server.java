@@ -1,100 +1,140 @@
+package miniproject;
+
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
 import java.util.Date;
-import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.scene.Scene;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextArea;
-import javafx.stage.Stage;
 
-import javax.xml.soap.Text;
+public class Server {
+  ArrayList<UserThread> users;
+  private ServerSocket serverSocket;
+  private int port;
 
-public class Server extends Application {
-  @Override // Override the start method in the Application class
-  public void start(Stage primaryStage) {
-    // Text area for displaying contents
-    TextArea ta = new TextArea();
 
-    // Create a scene and place it in the stage
-    Scene scene = new Scene(new ScrollPane(ta), 450, 200);
-    primaryStage.setTitle("Server"); // Set the stage title
-    primaryStage.setScene(scene); // Place the scene in the stage
-    primaryStage.show(); // Display the stage
+  public Server(){
+    port = 8000;
+    users = new ArrayList<>();
+  }
 
-    new Thread( () -> {
+  public static void main(String[] args) {
+    Server server = new Server();
+    server.initiateServer();
+  }
+
+
+  public void initiateServer(){
       try {
         // Create a server socket
-        ServerSocket serverSocket = new ServerSocket(8000);
-        //Platform.runLater(() ->
-        ta.appendText("Server started at " + new Date() + '\n');//);
+        serverSocket = new ServerSocket(port);
 
-        // Listen for a connection request
-
-
+        System.out.println("Server started at " + new Date() + "\n");
         while (true) {
+          // Listen for a connection request
           Socket socket = serverSocket.accept();
-
           // Create data input and output streams
-          DataInputStream inputFromClient = new DataInputStream(
-                  socket.getInputStream());
-          DataOutputStream outputToClient = new DataOutputStream(
-                  socket.getOutputStream());
-          Thread t = new ClientHandler(socket,inputFromClient,outputToClient,ta);
-          // Receive radius from the client
-          t.start();
+          UserThread user = new UserThread(this, socket);
+          users.add(user);
+          user.start();
+          // ta.appendText("\n" + users.size());
           //});
         }
+
       }
       catch(IOException ex) {
         ex.printStackTrace();
       }
-    }).start();
+
+
+    }
+
+  public void sendAll(String message){
+    for(UserThread userThread : users){
+      userThread.sendMessage(message);
+    }
   }
+
+  public ArrayList<UserThread> getUsers() {
+    return users;
+  }
+
+
 
   /**
    * The main method is only needed for the IDE with limited
    * JavaFX support. Not needed for running from the command line.
    */
-  public static void main(String[] args) {
-    launch(args);
-  }
+
 }
 
-class ClientHandler extends Thread{
+class UserThread extends Thread{
   private DataInputStream dis;
   private DataOutputStream dos;
   private Socket s;
-  private TextArea ta;
+  private Server server;
+  String name;
+  int score;
 
-  public ClientHandler(Socket s, DataInputStream dis, DataOutputStream dos, TextArea ta) {
+  public UserThread(Server server, Socket s) {
     this.s = s;
-    this.dis = dis;
-    this.dos = dos;
-    this.ta = ta;
+    this.server = server;
+    score=0;
   }
+
+
   @Override
   public void run()
   {
-    ta.appendText("Thread has started");
-    while (true)
-    {
-      try {
-        double radius = dis.readDouble();
-
-        // Compute area
-        double area = radius * radius * Math.PI;
-
-        // Send area back to the client
-        dos.writeDouble(area);
-
-        //Platform.runLater(() -> {
-        ta.appendText("Radius received from client: "
-                + radius + '\n');
-        ta.appendText("Area is: " + area + '\n');
+    try {
+    dis = new DataInputStream(s.getInputStream());
+    dos = new DataOutputStream(s.getOutputStream());
+    System.out.println("\nThread has started");
+    setUserName(readMessage());
+    //System.out.println("\nNew user joined: " + name);
+    server.sendAll("\nNew user joined: " + name);
+    while (true) {
+    String clientMessage = readMessage();
+    server.sendAll("\n" + name + ": " + clientMessage);
+    }
       } catch (Exception e) {
         e.printStackTrace();
       }
     }
+
+  int getScore(){
+    return score;
   }
-}
+
+  void setScore(int score){
+    this.score=score;
+  }
+
+  String getUserName(){
+    return name;
+  }
+
+  void setUserName(String name){
+    this.name=name;
+  }
+
+  public void sendMessage(String m){
+    try {
+      dos.writeUTF(m);
+      dos.flush();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  public String readMessage(){
+    String m = null;
+    try {
+      m = dis.readUTF();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    return m;
+  }
+
+
+  }
+
