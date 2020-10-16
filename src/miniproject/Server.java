@@ -93,7 +93,7 @@ class UserThread extends Thread{
     server.sendAll("\nNew user joined: " + name);
     while (true) {
     String clientMessage = readMessage();
-    server.sendAll("\n" + name + ": " + clientMessage);
+    server.sendAll("\n" + getUserName() + ": " + clientMessage);
     }
       } catch (Exception e) {
         e.printStackTrace();

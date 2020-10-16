@@ -117,7 +117,6 @@ public class Main extends Application {
         });
 
 
-
         try {
 
             // Create a socket to connect to the server
