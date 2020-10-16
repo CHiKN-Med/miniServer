@@ -109,7 +109,7 @@ public class Main extends Application {
                     toServer.writeUTF(sendMessageField.getText());
                     toServer.flush(); // send the message
                     sendMessageField.clear();
-                    chatBox.appendText(fromServer.readUTF());
+
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -117,10 +117,11 @@ public class Main extends Application {
         });
 
 
+
         try {
 
             // Create a socket to connect to the server
-            Socket socket = new Socket("localhost", 8000);
+            Socket socket = new Socket("192.168.43.151", 8000);
 
 
             // Create an input stream to receive data from the server
@@ -129,6 +130,15 @@ public class Main extends Application {
             // Create an output stream to send data to the server
             toServer = new DataOutputStream(socket.getOutputStream());
 
+            new Thread(() -> {
+                while(true){
+                    try {
+                        chatBox.appendText(fromServer.readUTF());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }).start();
 
     }
         catch (IOException ex) {
