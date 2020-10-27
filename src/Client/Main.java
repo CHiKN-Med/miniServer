@@ -1,6 +1,8 @@
 package Client;
 
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.embed.swing.JFXPanel;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
@@ -24,6 +26,10 @@ public class Main extends Application {
     DataOutputStream toServer = null;
     DataInputStream fromServer = null;
     String theMessage = null;
+
+    boolean lobbyLoop = false;
+    boolean gameLoop = false;
+
     @Override
     public void start(Stage primaryStage) throws Exception{
 
@@ -75,21 +81,44 @@ public class Main extends Application {
         HBox sendMessage = new HBox(sendMessageField);
 
         Button sendText = new Button("Send");
-        HBox buttonBox = new HBox(sendText);
+        Button startGame = new Button("Start Game");
+        HBox buttonBox = new HBox(sendText, startGame);
 
         // Adding compenents
         mainPane2.getChildren().addAll(welcomeText, chatText,sendMessage,buttonBox);
 
         // Setting new Scene
         Scene scene2 = new Scene(mainPane2, 600, 275);
-        // ACTION EVENTS
+
+        // SCENE 3 --
+
+        // Panes - >
+        HBox mainPane3 = new HBox(10);
+
+        // Components
+        TextArea quizText = new TextArea(); chatBox.setEditable(false); chatBox.setMaxSize(200,300);
+        HBox quizBox = new HBox(quizText);
+
+        Button sendAnswer1 = new Button("1");
+        Button sendAnswer2 = new Button("2");
+        Button sendAnswer3 = new Button("3");
+        Button sendAnswer4 = new Button("4");
+        HBox answerBox = new HBox(sendAnswer1, sendAnswer2, sendAnswer3, sendAnswer4);
+
+        // Adding compenents
+        mainPane3.getChildren().addAll(quizBox, answerBox);
+
+        // Setting new Scene
+        Scene scene3 = new Scene(mainPane3, 600, 275);
 
 
-
+        // write thread
+        new Thread(() -> {
+        // buttons in scene 1 (welcome scene) -- >
         knap.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                primaryStage.setScene(scene2);
+                setNewScene(scene2, primaryStage);
                 String userName = ta.getText();
                 ta2.setText("\nWelcome " + userName + "\n");
                 try {
@@ -102,6 +131,7 @@ public class Main extends Application {
             }
         });
 
+        //button in scene 2 (lobby)
         sendText.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
@@ -109,6 +139,31 @@ public class Main extends Application {
                     toServer.writeUTF(sendMessageField.getText());
                     toServer.flush(); // send the message
                     sendMessageField.clear();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        startGame.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                try {
+                    toServer.writeUTF("STARTTHEGAME");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+            }
+        });
+
+        //button in scene 3 (game)
+        sendAnswer1.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                try {
+                    toServer.writeBoolean(true);
+                    toServer.writeInt(1);
 
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -116,12 +171,50 @@ public class Main extends Application {
             }
         });
 
+        sendAnswer2.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                try {
+                    toServer.writeBoolean(true);
+                    toServer.writeInt(2);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        sendAnswer3.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                try {
+                    toServer.writeBoolean(true);
+                    toServer.writeInt(3);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        sendAnswer4.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                try {
+                    toServer.writeBoolean(true);
+                    toServer.writeInt(4);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        }).start();
+
 
 
         try {
 
             // Create a socket to connect to the server
-            Socket socket = new Socket("192.168.43.151", 8000);
+            Socket socket = new Socket("localhost", 8000);
 
 
             // Create an input stream to receive data from the server
@@ -130,15 +223,45 @@ public class Main extends Application {
             // Create an output stream to send data to the server
             toServer = new DataOutputStream(socket.getOutputStream());
 
+
+            // read thread
             new Thread(() -> {
+
                 while(true){
                     try {
-                        chatBox.appendText(fromServer.readUTF());
+                        String serverMessage = fromServer.readUTF();
+                        if(serverMessage.equalsIgnoreCase("STARTTHEGAME"))
+                        {
+                            Platform.runLater(() -> {
+                                setNewScene(scene3, primaryStage);
+                            });
+                            break;
+                        }
+                        chatBox.appendText(serverMessage);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                 }
+
+
+
+                while(true){
+                    try {
+                        String serverMessage = fromServer.readUTF();
+                        if(serverMessage.equalsIgnoreCase("STARTTHEGAME")){
+                            serverMessage = fromServer.readUTF();
+                        }
+                        quizText.appendText(serverMessage);
+
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+
             }).start();
+
+
 
     }
         catch (IOException ex) {
@@ -151,10 +274,16 @@ public class Main extends Application {
 
 
 
-
-
-
     public static void main(String[] args) {
         launch(args);
     }
+
+
+    public void setNewScene(Scene scene, Stage stage){
+        stage.setScene(scene);
+    }
+
+
+
 }
+
